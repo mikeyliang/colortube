@@ -16,7 +16,7 @@ $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/
 $ brew install tesseract
 ```
 
-Change game.py imports if for homebrew path
+Change game.py for tesseract executable based on PATH
 
 #### Apple M1
 
