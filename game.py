@@ -43,8 +43,8 @@ class TubeGame():
 	        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, thresh_params[0], thresh_params[1])
         return thresh
 
-    def getMask(self, img, l_range, h_range):
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    def getMask(self, img, l_range, h_range, color = cv2.COLOR_BGR2RGB):
+        hsv = cv2.cvtColor(img, color)
         return cv2.inRange(hsv, l_range, h_range)
 
     def displayThreshold(self):
@@ -173,6 +173,42 @@ class TubeGame():
     def displayTube(self, index: int):
         cv2.imshow('Tube ' + str(int), self.tubes_img[index])
         cv2.waitKey()
+
+
+    # TODO: Finish
+    def updateTube(self):
+        l_range = np.array([0, 20, 100])
+        h_range = np.array([360, 240, 240])
+        for tube in self.tubes_img:
+            mask = self.getMask(tube, l_range, h_range, cv2.COLOR_BGR2HSV_FULL)
+            masked = cv2.bitwise_and(tube, tube, mask = mask)
+            cv2.imshow('tube', masked)
+            cv2.waitKey()
+
+            color_dict_HSV = {'black': [[180, 255, 30], [0, 0, 0]],
+              'white': [[180, 18, 255], [0, 0, 231]],
+              'red1': [[180, 255, 255], [159, 50, 70]],
+              'red2': [[9, 255, 255], [0, 50, 70]],
+              'green': [[89, 255, 255], [36, 50, 70]],
+              'blue': [[128, 255, 255], [90, 50, 70]],
+              'yellow': [[35, 255, 255], [25, 50, 70]],
+              'purple': [[158, 255, 255], [129, 50, 70]],
+              'orange': [[24, 255, 255], [10, 50, 70]],
+              'gray': [[180, 18, 230], [0, 0, 40]]}
+
+
+
+    # TODO: FIX
+    def getType(self):
+        for tube in self.tubes_img:
+            text = pytesseract.image_to_string(tube)
+            cv2.imshow('text', tube)
+            cv2.waitKey()
+            print(text)
+        return 
+        
+
+    
 
 
         
