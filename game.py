@@ -2,6 +2,7 @@ import cv2
 import numpy as np 
 import pytesseract
 from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 
 
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/bin/tesseract'
@@ -25,9 +26,8 @@ class TubeGame():
             self.phone = self.phone[self.level_bbox[3][1]: self.phone.shape[0], 0: self.phone.shape[1]]
             self.tubes, self.tubes_img = self.getTube()
             print(f"FOUND TUBES: {len(self.tubes)}")
-            self.colors = self.getColors()
-            print(len(self.colors))
-            if len(self.colors) == len(self.tubes) - 2:
+            self.colors = self.getGameColors()
+            if len(self.colors) == len(self.tubes) - 2: # Is this true?
                 print(f"COLORS CONFIRMED: {len(self.colors)}")
             
 
@@ -180,22 +180,28 @@ class TubeGame():
             cv2.imshow('Tube ' + str(index + 1), tube)
             cv2.waitKey()
 
-    def getColors(self):
+    def getGameColors(self):
         box, game_img = self.getGame()
-        game_img = cv2.cvtColor(game_img, cv2.COLOR_BGR2HSV)
+        game_img = np.array(cv2.cvtColor(game_img, cv2.COLOR_BGR2HSV))
 
         # TODO: Make this runtime shorter
+        #for row in range(game_img.shape[0]):
+        #    for column in range(game_img.shape[1]):
+        #        if game_img[row, column, :][1] < 50 and (game_img[row, column, :][2] < 50 or game_img[row, column, :][2] > 150):
+        #            game_img[row, column, :] = [0, 0, 0]
 
-        for row in range(game_img.shape[0]):
-            for column in range(game_img.shape[1]):
-                if game_img[row, column, :][1] < 50 and (game_img[row, column, :][2] < 50 or game_img[row, column, :][2] > 150):
-                    game_img[row, column, :] = [0, 0, 0]
-        game_img = cv2.cvtColor(game_img, cv2.COLOR_HSV2BGR)
+        h, s, v = cv2.split(game_img)
+        # mask = (s < 50) & (v < 50 | v > 150)
+        mask = (v < 50)
+        hsv = cv2.merge([h, s, v])
+        hsv[:,:,:][mask] = [0, 0, 0]
+
+        game_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
         game_img = game_img.reshape((game_img.shape[0] * game_img.shape[1], 3))
 
-        clt = KMeans(n_clusters = len(self.tubes))
-        clt.fit(game_img)
+        clt = MiniBatchKMeans(n_clusters = len(self.tubes))
+        clt.fit(game_img)   
         
         hist = self.centroid_histogram(clt)
         # TODO: Find better algorithm to get colors
@@ -206,11 +212,10 @@ class TubeGame():
                 percentage.append(hist[val])
                 colors.append(clt.cluster_centers_[val])
 
-        bar = self.plot_colors(percentage, colors)
+        # bar = self.plot_colors(percentage, colors)
+        # cv2.imshow('bar', bar)
+        # cv2.waitKey()
 
-        
-        cv2.imshow('bar', bar)
-        cv2.waitKey()
         return colors
 
     def plot_colors(self, hist, centroids):
