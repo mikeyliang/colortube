@@ -1,10 +1,10 @@
 import cv2
 import numpy as np 
 import pytesseract
+from sklearn.cluster import KMeans
 
 
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/bin/tesseract'
-
 
 class TubeGame():
     
@@ -25,6 +25,11 @@ class TubeGame():
             self.phone = self.phone[self.level_bbox[3][1]: self.phone.shape[0], 0: self.phone.shape[1]]
             self.tubes, self.tubes_img = self.getTube()
             print(f"FOUND TUBES: {len(self.tubes)}")
+            self.colors = self.getColors()
+            print(len(self.colors))
+            if len(self.colors) == len(self.tubes) - 2:
+                print(f"COLORS CONFIRMED: {len(self.colors)}")
+            
 
     def __getitem__(self, index):
         return 
@@ -129,6 +134,7 @@ class TubeGame():
                 return text.split(), item
         return None, []
 
+    # Tubes are from Top to Bottom, Left to Right
     def getTube(self, area_threshold = 0.8):
         thresh = self.getThreshold(self.phone, thresh_params = [5, 5])
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -144,10 +150,9 @@ class TubeGame():
             if rect[3] > rect[2]:
                 rects.append(rect)
 
-        rects = np.array(sorted(rects, key = lambda x: (x[1], x[0]))); 
+        rects = np.array(sorted(rects, key = lambda x: (x[0], x[1])))
         MAX_AREA = max(rects[:, 2]) * max(rects[:, 3])
         
-
         for rect in rects:
             if rect[2] * rect[3] > area_threshold * MAX_AREA:
                 rect = [[rect[0], rect[1]], [rect[0] + rect[2], rect[1]], 
@@ -163,46 +168,76 @@ class TubeGame():
         y_min = np.amin(self.tubes[:, :,1]) - padding
         y_max = np.amax(self.tubes[:, :,1]) + padding
         box = [[x_min, y_min], [x_max, y_min], [x_max, y_max], [x_min, y_max]]
-        return box
+        return box, self.four_point_transform(self.phone, box)
 
     def displayGame(self):
-        box = self.getGame()
-        cv2.imshow('game', self.four_point_transform(self.phone, box))
+        box, game_img = self.getGame()
+        cv2.imshow('game', game_img)
         cv2.waitKey()
 
-    def displayTube(self, index: int):
-        cv2.imshow('Tube ' + str(int), self.tubes_img[index])
+    def displayTube(self):
+        for index, tube in enumerate(self.tubes_img):
+            cv2.imshow('Tube ' + str(index + 1), tube)
+            cv2.waitKey()
+
+    def getColors(self):
+        box, game_img = self.getGame()
+        game_img = cv2.cvtColor(game_img, cv2.COLOR_BGR2HSV)
+
+        # TODO: Make this runtime shorter
+
+        for row in range(game_img.shape[0]):
+            for column in range(game_img.shape[1]):
+                if game_img[row, column, :][1] < 50 and (game_img[row, column, :][2] < 50 or game_img[row, column, :][2] > 150):
+                    game_img[row, column, :] = [0, 0, 0]
+        game_img = cv2.cvtColor(game_img, cv2.COLOR_HSV2BGR)
+
+        game_img = game_img.reshape((game_img.shape[0] * game_img.shape[1], 3))
+
+        clt = KMeans(n_clusters = len(self.tubes))
+        clt.fit(game_img)
+        
+        hist = self.centroid_histogram(clt)
+        # TODO: Find better algorithm to get colors
+        values = [val/min(hist) for val in hist]; percentage = []; colors = []
+
+        for val in range(len(values)):
+            if values[val] < 2:
+                percentage.append(hist[val])
+                colors.append(clt.cluster_centers_[val])
+
+        bar = self.plot_colors(percentage, colors)
+
+        
+        cv2.imshow('bar', bar)
         cv2.waitKey()
+        return colors
 
+    def plot_colors(self, hist, centroids):
+        # initialize the bar chart representing the relative frequency
+        # of each of the colors
+        bar = np.zeros((50, 300, 3), dtype = "uint8")
+        startX = 0
+        # loop over the percentage of each cluster and the color of
+        # each cluster
+        for (percent, color) in zip(hist, centroids):
+            # plot the relative percentage of each cluster
+            endX = startX + (percent * 300)
+            cv2.rectangle(bar, (int(startX), 0), (int(endX), 50),
+                color.astype("uint8").tolist(), -1)
+            startX = endX
+        
+        # return the bar chart
+        return bar
 
-    # TODO: Finish
-    def updateTube(self):
-        l_range = np.array([0, 20, 100])
-        h_range = np.array([360, 240, 240])
-        for tube in self.tubes_img:
-            mask = self.getMask(tube, l_range, h_range, cv2.COLOR_BGR2HSV_FULL)
-            masked = cv2.bitwise_and(tube, tube, mask = mask)
-            cv2.imshow('tube', masked)
-            cv2.waitKey()
-
-            color_dict_HSV = {'black': [[180, 255, 30], [0, 0, 0]],
-              'white': [[180, 18, 255], [0, 0, 231]],
-              'red1': [[180, 255, 255], [159, 50, 70]],
-              'red2': [[9, 255, 255], [0, 50, 70]],
-              'green': [[89, 255, 255], [36, 50, 70]],
-              'blue': [[128, 255, 255], [90, 50, 70]],
-              'yellow': [[35, 255, 255], [25, 50, 70]],
-              'purple': [[158, 255, 255], [129, 50, 70]],
-              'orange': [[24, 255, 255], [10, 50, 70]],
-              'gray': [[180, 18, 230], [0, 0, 40]]}
-
-
-
-    # TODO: FIX
-    def getType(self):
-        for tube in self.tubes_img:
-            text = pytesseract.image_to_string(tube)
-            cv2.imshow('text', tube)
-            cv2.waitKey()
-            print(text)
-        return 
+    def centroid_histogram(self, clt):
+        # grab the number of different clusters and create a histogram
+        # based on the number of pixels assigned to each cluster
+        numLabels = np.arange(0, len(np.unique(clt.labels_)) + 1)
+        (hist, _) = np.histogram(clt.labels_, bins = numLabels)
+        # normalize the histogram, such that it sums to one
+        hist = hist.astype("float")
+        hist /= hist.sum()
+        # return the histogram
+        return hist
+        
