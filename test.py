@@ -6,4 +6,4 @@ im = cv2.imread(r"images/colors.jpeg")
 
 game = TubeGame(im)
 
-game.displayGame()
+game.getTubeColors()

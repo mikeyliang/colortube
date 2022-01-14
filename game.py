@@ -3,7 +3,7 @@ import numpy as np
 import pytesseract
 from sklearn.cluster import KMeans
 from sklearn.cluster import MiniBatchKMeans
-
+import math
 
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/bin/tesseract'
 
@@ -29,10 +29,11 @@ class TubeGame():
             self.colors = self.getGameColors()
             if len(self.colors) == len(self.tubes) - 2: # Is this true?
                 print(f"COLORS CONFIRMED: {len(self.colors)}")
+                self.tube_colors = self.getTubeColors()
+                print(f"TUBE COLORS FOUND")
             
-
     def __getitem__(self, index):
-        return 
+        return self.tube_colors[index]
 
     def __len__(self):
         return len(self.tubes)
@@ -135,7 +136,7 @@ class TubeGame():
         return None, []
 
     # Tubes are from Top to Bottom, Left to Right
-    def getTube(self, area_threshold = 0.8):
+    def getTube(self, area_threshold = 0.8, padding = 10):
         thresh = self.getThreshold(self.phone, thresh_params = [5, 5])
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -155,6 +156,10 @@ class TubeGame():
         
         for rect in rects:
             if rect[2] * rect[3] > area_threshold * MAX_AREA:
+
+                rect[0] += 2 * padding; rect[2] -= 4 * padding
+                rect[1] += 10 * padding; rect[3] -= 12 * padding
+
                 rect = [[rect[0], rect[1]], [rect[0] + rect[2], rect[1]], 
                         [rect[0] + rect[2], rect[1] + rect[3]], [rect[0], rect[1] + rect[3]]]
                 tubes.append(rect)
@@ -245,4 +250,32 @@ class TubeGame():
         hist /= hist.sum()
         # return the histogram
         return hist
-        
+
+    def getTubeColors(self):
+        colors = []
+        for tubes in self.tubes_img:
+            color = []
+            y_top = 0
+            height = round(tubes.shape[0]/4 - 1)
+            y_bot = height
+            while y_bot < tubes.shape[0]:
+                color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
+                y_top += height; y_bot += height
+                color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
+                clt = MiniBatchKMeans(n_clusters = 1)
+                clt.fit(color_img)
+                euclid_dist = []
+                for gamecolor in self.colors:
+                    euclid_dist.append(self.rgb_euclid(clt.cluster_centers_[0], gamecolor))
+                min_euclid = np.argmin(euclid_dist)
+                if euclid_dist[min_euclid] < 50:
+                    color.append(min_euclid)
+                else:
+                    color.append(0)
+            colors.append(color)
+        return colors
+
+    def rgb_euclid(self, color1, color2):
+        diff = np.array(color2) - np.array(color1)
+        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
+
