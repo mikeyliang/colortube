@@ -269,7 +269,7 @@ class TubeGame():
                     euclid_dist.append(self.rgb_euclid(clt.cluster_centers_[0], gamecolor))
                 min_euclid = np.argmin(euclid_dist)
                 if euclid_dist[min_euclid] < 50:
-                    color.append(min_euclid)
+                    color.append(min_euclid + 1) # Plus 1 to take into account empty color (= 0)
                 else:
                     color.append(0)
             colors.append(color)
