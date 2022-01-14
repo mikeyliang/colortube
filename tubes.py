@@ -245,12 +245,12 @@ class Tubes:
         colors = []
         for tubes in self.__tubes_img:
             color = []
-            y_top = 0
             height = round(tubes.shape[0]/4 - 1)
-            y_bot = height
-            while y_bot < tubes.shape[0]:
+            y_top = tubes.shape[0] - height
+            y_bot = tubes.shape[0]
+            while y_top > 0:
                 color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
-                y_top += height; y_bot += height
+                y_top -= height; y_bot -= height
                 color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
                 clt = MiniBatchKMeans(n_clusters = 1)
                 clt.fit(color_img)
@@ -268,4 +268,3 @@ class Tubes:
     def __rgb_euclid(self, color1, color2):
         diff = np.array(color2) - np.array(color1)
         return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
-
