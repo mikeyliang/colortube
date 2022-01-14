@@ -1,9 +1,8 @@
 import cv2 
 
-from game import TubeGame
+from tubes import Tubes
+from game import Game
 
 im = cv2.imread(r"images/colors.jpeg")
 
-game = TubeGame(im)
-
-game.getTubeColors()
+game = Game(im)
