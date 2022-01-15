@@ -12,14 +12,17 @@ pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/b
 
 class Tubes:
     
-    def __init__(self, img):
-        w_pad = round(img.shape[1]/10)
-        h_pad = round(img.shape[0]/10)
-        self.__img = cv2.copyMakeBorder(img, h_pad, h_pad, w_pad, w_pad, cv2.BORDER_CONSTANT, value = [255, 255, 255])
-        self.__phone, self.__phone_bbox = self.__findPhone()
+    def __init__(self, img, img_type):
+        types = ['phone', 'screenshot']
+        if img_type == types[0]:
+            self.__phone, self.__phone_bbox = self.__findPhone()
 
-        if self.__phone.shape[1] > self.__phone.shape[0]:
-            self.__phone =  cv2.rotate(self.__phone, cv2.ROTATE_90_CLOCKWISE) 
+            if self.__phone.shape[1] > self.__phone.shape[0]:
+                self.__phone =  cv2.rotate(self.__phone, cv2.ROTATE_90_CLOCKWISE) 
+        elif img_type == types[1]:
+            self.__phone = img
+            self.__phone_bbox = [[0, 0], [img.shape[1], 0], 
+            [0, img.shape[0]], [img.shape[1], img.shape[0]]]
 
         self.__level, self.__level_bbox = self.__findLevel()
         
@@ -250,14 +253,18 @@ class Tubes:
 
             colors.append(color)
             
-        odd = []; even = []
-        for ind, clr in enumerate(colors):
-            if ind % 2 == 0:
-                even.append(clr)
-            else:
-                odd.append(clr)
+        # ----------- Swap even and odd tubes ----------- #
+        #      Not working for one or 3 rows of tubes
+        
+        #odd = []; even = []
+        #for ind, clr in enumerate(colors):
+        #    if ind % 2 == 0:
+        #        even.append(clr)
+        #    else:
+        #        odd.append(clr)
 
-        return even + odd, gamecolors  
+        #return even + odd, gamecolors  
+        return colors, gamecolors
                                  
     def __rgb_euclid(self, color1, color2):
        diff = np.array(color2) - np.array(color1)
