@@ -6,4 +6,7 @@ from game import Game
 im = cv2.imread(r"images/test.jpeg")
 
 game = Game(im)
-            
+
+print("GAMEE")
+tubes = game.getTubeColors()
+game.solve()

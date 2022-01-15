@@ -5,9 +5,6 @@ import pytesseract
 from sklearn.cluster import KMeans
 from sklearn.cluster import MiniBatchKMeans
 import math
-from colormath.color_objects import sRGBColor, LabColor
-from colormath.color_conversions import convert_color
-from colormath.color_diff import delta_e_cie2000
 
 from skimage import io
 
@@ -250,6 +247,7 @@ class Tubes:
 
 
             colors.append(color)
+            print(colors)
         return colors, gamecolors  
                                  
     def __rgb_euclid(self, color1, color2):
