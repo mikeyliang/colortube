@@ -5,6 +5,9 @@ import pytesseract
 from sklearn.cluster import KMeans
 from sklearn.cluster import MiniBatchKMeans
 import math
+from colormath.color_objects import sRGBColor, LabColor
+from colormath.color_conversions import convert_color
+from colormath.color_diff import delta_e_cie2000
 
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/bin/tesseract'
 
@@ -247,7 +250,7 @@ class Tubes:
         hist /= hist.sum()
         return hist
 
-    def __findTubeColors(self):
+    def __finddTubeColors(self):
         colors = []
         gamecolors = []
         for tubes in self.__tubes_img:
@@ -296,6 +299,60 @@ class Tubes:
             colors.append(color)
         return colors
 
+    def __findTubeColors(self):
+        colors = []
+        gamecolors = []
+        for index, tubes in enumerate(self.__tubes_img):
+            color = []
+            height = math.floor(tubes.shape[0]/4 - 1)
+            y_top = tubes.shape[0] - height
+            y_bot = tubes.shape[0]
+            
+            while y_top > 0:
+                color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
+                y_top -= height; y_bot -= height
+                color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
+                clt = MiniBatchKMeans(n_clusters = 1)
+                clt.fit(color_img)
+
+                boxcolor = clt.cluster_centers_[0]
+
+                colormath = np.int0(boxcolor)/255
+
+
+                if len(gamecolors) == 0:
+                    gamecolors.append(boxcolor)
+                    color.append(1)
+                elif all(boxcolor < 50):
+                    color.append(0)
+                else:
+                    found = False
+                    min = []
+                    for index, c in enumerate(gamecolors):
+                        print(self.__rgb_euclid(boxcolor, c))
+                        if (self.__rgb_euclid(boxcolor, c) < 600):
+                            min.append([self.__rgb_euclid(boxcolor, c), index])
+                            found = True
+ 
+                    if not found:
+                        gamecolors.append(boxcolor)
+                        color.append(len(gamecolors))
+                    else:
+                        # [[4.54544 , 2]]
+                        color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
+
+
+            colors.append(color)
+
+        return colors    
+                                 
+
+
     def __rgb_euclid(self, color1, color2):
-        diff = np.array(color2) - np.array(color1)
-        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
+       diff = np.absolute(np.array(color2) - np.array(color1))
+       return math.sqrt(diff[0]**3 + diff[1]**3 + diff[2]**3)
+       #c1 = sRGBColor(color1[0], color1[1], color1[2])
+       #c2 = sRGBColor(color2[0], color2[1], color2[2])
+       #lab1 = convert_color(c1, LabColor)
+       #lab2 = convert_color(c2, LabColor)
+       #return delta_e_cie2000(lab1, lab2)
