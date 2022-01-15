@@ -1,5 +1,6 @@
 import cv2
-import numpy as np 
+import numpy as np
+from numpy.core.multiarray import empty 
 import pytesseract
 from sklearn.cluster import KMeans
 from sklearn.cluster import MiniBatchKMeans
@@ -26,11 +27,16 @@ class Tubes:
             self.__phone = self.__phone[self.__level_bbox[3][1]: self.__phone.shape[0], 0: self.__phone.shape[1]]
             self.__tubes, self.__tubes_img = self.__findTube()
             print(f"FOUND TUBES: {len(self.__tubes)}")
-            self.__colors = self.__findGameColors()
-            if len(self.__colors) == len(self.__tubes) - 2: # Is this true?
-                print(f"COLORS CONFIRMED: {len(self.__colors)}")
-                self.__tube_colors = self.__findTubeColors()
-                print(f"TUBE COLORS FOUND")
+            #self.__colors = self.__findGameColors()
+            # print(len(self.__colors))
+            #if len(self.__colors) == len(self.__tubes) - 2: # Is this true?
+            # print(f"COLORS CONFIRMED: {len(self.__colors)}")
+            self.__tube_colors = self.__findTubeColors()
+            print(f"TUBE COLORS FOUND")
+        else:
+            print("LEVEL AND GAME NOT FOUND")
+
+
             
     def __finditem__(self, index):
         return self.__tube_colors[index]
@@ -175,10 +181,10 @@ class Tubes:
         return np.array(tubes), tubes_img
 
     def __findGame(self, padding = 25):
-        x_min = np.amin(self.__tubes[:, :,0]) - padding
-        x_max = np.amax(self.__tubes[:, :,0]) + padding
-        y_min = np.amin(self.__tubes[:, :,1]) - padding
-        y_max = np.amax(self.__tubes[:, :,1]) + padding
+        x_min = np.amin(self.__tubes[:, :,0]) - 2 * padding
+        x_max = np.amax(self.__tubes[:, :,0]) + 2 * padding
+        y_min = np.amin(self.__tubes[:, :,1]) - 2 * padding
+        y_max = np.amax(self.__tubes[:, :,1]) + 2 * padding
         box = [[x_min, y_min], [x_max, y_min], [x_max, y_max], [x_min, y_max]]
         return box, self.__four_point_transform(self.__phone, box)
 
@@ -190,14 +196,14 @@ class Tubes:
     def displayTube(self):
         for index, tube in enumerate(self.__tubes_img):
             cv2.imshow('Tube ' + str(index + 1), tube)
-            cv2.waitKey(2000)
+            cv2.waitKey()
 
     def __findGameColors(self):
         box, game_img = self.__findGame()
         game_img = np.array(cv2.cvtColor(game_img, cv2.COLOR_BGR2HSV))
 
         h, s, v = cv2.split(game_img)
-        mask = (v < 50)
+        mask = (v < 25)
         hsv = cv2.merge([h, s, v])
         hsv[:,:,:][mask] = [0, 0, 0]
 
@@ -217,9 +223,9 @@ class Tubes:
                 percentage.append(hist[val])
                 colors.append(clt.cluster_centers_[val])
 
-        # bar = self.plot_colors(percentage, colors)
-        # cv2.imshow('bar', bar)
-        # cv2.waitKey()
+        bar = self.__plot_colors(percentage, colors)
+        cv2.imshow('bar', bar)
+        cv2.waitKey()
 
         return colors
 
@@ -243,6 +249,7 @@ class Tubes:
 
     def __findTubeColors(self):
         colors = []
+        gamecolors = []
         for tubes in self.__tubes_img:
             color = []
             height = round(tubes.shape[0]/4 - 1)
@@ -250,18 +257,42 @@ class Tubes:
             y_bot = tubes.shape[0]
             while y_top > 0:
                 color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
+                cv2.imshow('color', color_img)
+                cv2.waitKey()
                 y_top -= height; y_bot -= height
                 color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
                 clt = MiniBatchKMeans(n_clusters = 1)
                 clt.fit(color_img)
                 euclid_dist = []
-                for gamecolor in self.__colors:
-                    euclid_dist.append(self.__rgb_euclid(clt.cluster_centers_[0], gamecolor))
-                min_euclid = np.argmin(euclid_dist)
-                if euclid_dist[min_euclid] < 50:
-                    color.append(min_euclid + 1) # Plus 1 to take into account empty color (= 0)
-                else:
+                
+                print(clt.cluster_centers_)
+                if all(clt.cluster_centers_[0] < 50):
                     color.append(0)
+                elif len(gamecolors) == 0:
+                    gamecolors.append(clt.cluster_centers_[0])
+                    color.append(len(gamecolors))
+                else:
+                    color_close = []
+                    for c in gamecolors:
+                        color_close.append(self.__rgb_euclid(clt.cluster_centers_[0], c))
+                    if min(color_close) > 40:
+                        gamecolors.append(clt.cluster_centers_[0])
+                        color.append(len(gamecolors))
+                    else:
+                        color.append(np.argmin(color_close) + 1)
+                        
+                #for gamecolor in gamecolors:
+                #    euclid_dist.append(self.__rgb_euclid(clt.cluster_centers_[0], gamecolor))
+                #min_euclid = np.argmin(euclid_dist)
+                
+                #if all(clt.cluster_centers_[0] < 50):
+                #    color.append(0)
+                #if euclid_dist[min_euclid] < 50:
+                #else:
+                #    color.append(min_euclid + 1) # Plus 1 to take into account empty color (= 0)
+                #else:
+                #    color.append(0)
+            
             colors.append(color)
         return colors
 
