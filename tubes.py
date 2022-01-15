@@ -9,6 +9,8 @@ from colormath.color_objects import sRGBColor, LabColor
 from colormath.color_conversions import convert_color
 from colormath.color_diff import delta_e_cie2000
 
+from skimage import io
+
 pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/bin/tesseract'
 
 class Tubes:
@@ -30,15 +32,13 @@ class Tubes:
             self.__phone = self.__phone[self.__level_bbox[3][1]: self.__phone.shape[0], 0: self.__phone.shape[1]]
             self.__tubes, self.__tubes_img = self.__findTube()
             print(f"FOUND TUBES: {len(self.__tubes)}")
-            #self.__colors = self.__findGameColors()
-            # print(len(self.__colors))
-            #if len(self.__colors) == len(self.__tubes) - 2: # Is this true?
-            # print(f"COLORS CONFIRMED: {len(self.__colors)}")
-            self.__tube_colors = self.__findTubeColors()
-            print(f"TUBE COLORS FOUND")
+            self.__tube_colors, self.__colors = self.__findTubeColors()
+            if len(self.__colors) == len(self.__tubes) - 2:
+                print(f"TUBE COLORS FOUND")
+            else:
+                print(f"COLORS FOUND INCORRECTLY")
         else:
             print("LEVEL AND GAME NOT FOUND")
-
 
             
     def __finditem__(self, index):
@@ -250,56 +250,7 @@ class Tubes:
         hist /= hist.sum()
         return hist
 
-    def __finddTubeColors(self):
-        colors = []
-        gamecolors = []
-        for tubes in self.__tubes_img:
-            color = []
-            height = round(tubes.shape[0]/4 - 1)
-            y_top = tubes.shape[0] - height
-            y_bot = tubes.shape[0]
-            while y_top > 0:
-                color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
-                cv2.imshow('color', color_img)
-                cv2.waitKey()
-                y_top -= height; y_bot -= height
-                color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
-                clt = MiniBatchKMeans(n_clusters = 1)
-                clt.fit(color_img)
-                euclid_dist = []
-                
-                print(clt.cluster_centers_)
-                if all(clt.cluster_centers_[0] < 50):
-                    color.append(0)
-                elif len(gamecolors) == 0:
-                    gamecolors.append(clt.cluster_centers_[0])
-                    color.append(len(gamecolors))
-                else:
-                    color_close = []
-                    for c in gamecolors:
-                        color_close.append(self.__rgb_euclid(clt.cluster_centers_[0], c))
-                    if min(color_close) > 40:
-                        gamecolors.append(clt.cluster_centers_[0])
-                        color.append(len(gamecolors))
-                    else:
-                        color.append(np.argmin(color_close) + 1)
-                        
-                #for gamecolor in gamecolors:
-                #    euclid_dist.append(self.__rgb_euclid(clt.cluster_centers_[0], gamecolor))
-                #min_euclid = np.argmin(euclid_dist)
-                
-                #if all(clt.cluster_centers_[0] < 50):
-                #    color.append(0)
-                #if euclid_dist[min_euclid] < 50:
-                #else:
-                #    color.append(min_euclid + 1) # Plus 1 to take into account empty color (= 0)
-                #else:
-                #    color.append(0)
-            
-            colors.append(color)
-        return colors
-
-    def __findTubeColors(self):
+    def __findTubeColors(self, padding = 20):
         colors = []
         gamecolors = []
         for index, tubes in enumerate(self.__tubes_img):
@@ -309,16 +260,13 @@ class Tubes:
             y_bot = tubes.shape[0]
             
             while y_top > 0:
-                color_img = tubes[y_top: y_bot, 0: tubes.shape[1]]
+                color_img = tubes[y_top + padding: y_bot - 2 * padding,  padding: tubes.shape[1] - padding]
                 y_top -= height; y_bot -= height
                 color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
                 clt = MiniBatchKMeans(n_clusters = 1)
                 clt.fit(color_img)
 
                 boxcolor = clt.cluster_centers_[0]
-
-                colormath = np.int0(boxcolor)/255
-
 
                 if len(gamecolors) == 0:
                     gamecolors.append(boxcolor)
@@ -329,8 +277,7 @@ class Tubes:
                     found = False
                     min = []
                     for index, c in enumerate(gamecolors):
-                        print(self.__rgb_euclid(boxcolor, c))
-                        if (self.__rgb_euclid(boxcolor, c) < 600):
+                        if (self.__rgb_euclid(boxcolor, c) < 50):
                             min.append([self.__rgb_euclid(boxcolor, c), index])
                             found = True
  
@@ -338,21 +285,14 @@ class Tubes:
                         gamecolors.append(boxcolor)
                         color.append(len(gamecolors))
                     else:
-                        # [[4.54544 , 2]]
                         color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
 
 
             colors.append(color)
-
-        return colors    
+        return colors, gamecolors  
                                  
 
 
     def __rgb_euclid(self, color1, color2):
-       diff = np.absolute(np.array(color2) - np.array(color1))
-       return math.sqrt(diff[0]**3 + diff[1]**3 + diff[2]**3)
-       #c1 = sRGBColor(color1[0], color1[1], color1[2])
-       #c2 = sRGBColor(color2[0], color2[1], color2[2])
-       #lab1 = convert_color(c1, LabColor)
-       #lab2 = convert_color(c2, LabColor)
-       #return delta_e_cie2000(lab1, lab2)
+       diff = np.array(color2) - np.array(color1)
+       return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
