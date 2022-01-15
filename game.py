@@ -1,5 +1,6 @@
 import copy
 from tubes import Tubes
+import cv2
 
 MAX_HEIGHT = 4
 class Game(Tubes):
@@ -9,7 +10,8 @@ class Game(Tubes):
         self.colors = self.getGameColors() # List of colors in the current game level
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
-        # self.displayGame()
+        # self.displayImg()
+        self.plot_tubes()
 
     def convertToString(self, tubes):
         result = []
@@ -66,7 +68,7 @@ class Game(Tubes):
         if len(source) == 0 or len(destination) == MAX_HEIGHT:
             return False
         color_in_tube = self.count_color_in_tube(source, source[0])
-        
+
         # dont move cuz same color
         if (color_in_tube == MAX_HEIGHT):
             return False
