@@ -1,4 +1,5 @@
 from tubes import Tubes
+import cv2
 
 class Game(Tubes):
     
@@ -7,7 +8,8 @@ class Game(Tubes):
         self.colors = self.getGameColors() # List of colors in the current game level
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
-        self.displayGame()
+        # self.displayImg()
+        self.plot_tubes()
 
     
 

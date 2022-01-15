@@ -16,7 +16,9 @@ pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/Cellar/tesseract/5.0.1/b
 class Tubes:
     
     def __init__(self, img):
-        self.__img = img
+        w_pad = round(img.shape[1]/10)
+        h_pad = round(img.shape[0]/10)
+        self.__img = cv2.copyMakeBorder(img, h_pad, h_pad, w_pad, w_pad, cv2.BORDER_CONSTANT, value = [255, 255, 255])
         self.__phone, self.__phone_bbox = self.__findPhone()
 
         if self.__phone.shape[1] > self.__phone.shape[0]:
@@ -255,3 +257,30 @@ class Tubes:
     def __rgb_euclid(self, color1, color2):
        diff = np.array(color2) - np.array(color1)
        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
+
+    
+    def plot_tubes(self):
+        tubes = np.zeros((300, len(self.__tubes) * 60, 3), dtype = "uint8")
+        startX = 20
+        startY = 0
+        percents = [0.25 for i in range(4)]
+
+        for tube in self.__tube_colors:
+            colors = []
+            for i in np.flip(tube):
+                if i == 0:
+                    colors.append(np.array([255, 255, 255]))
+                else:
+                    colors.append(self.__colors[i-1])
+            endX = startX + 40
+            for (percent, color) in zip(percents, colors):
+                endY = startY + (percent * 200)
+                print(color)
+                print(color.astype("uint8").tolist())
+                cv2.rectangle(tubes, (int(startX), int(startY)), (int(endX), int(endY)),
+                    color.astype("uint8").tolist(), -1)
+                startY = endY
+            startX = endX + 10
+            startY = 0
+        cv2.imshow('Detected Tubes', tubes)
+        cv2.waitKey()

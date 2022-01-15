@@ -5,5 +5,4 @@ from game import Game
 
 im = cv2.imread(r"images/test.jpeg")
 
-game = Game(im)
-            
+game = Game(im)     
