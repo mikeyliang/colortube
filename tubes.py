@@ -14,6 +14,7 @@ class Tubes:
     
     def __init__(self, img, img_type):
         types = ['phone', 'screenshot']
+        self.__img = img
         if img_type == types[0]:
             self.__phone, self.__phone_bbox = self.__findPhone()
 

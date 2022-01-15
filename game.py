@@ -43,7 +43,7 @@ class Game(Tubes):
                 else:
                     first_tube = self.tubes.pop()
                     self.tubes.insert(0, first_tube)
-                    print(self.tubes)
+                    # print(self.tubes)
         
         
 
