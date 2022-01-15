@@ -201,54 +201,15 @@ class Tubes:
             cv2.imshow('Tube ' + str(index + 1), tube)
             cv2.waitKey()
 
-    def __findGameColors(self):
-        box, game_img = self.__findGame()
-        game_img = np.array(cv2.cvtColor(game_img, cv2.COLOR_BGR2HSV))
-
-        h, s, v = cv2.split(game_img)
-        mask = (v < 25)
-        hsv = cv2.merge([h, s, v])
-        hsv[:,:,:][mask] = [0, 0, 0]
-
-        game_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-        game_img = game_img.reshape((game_img.shape[0] * game_img.shape[1], 3))
-
-        clt = MiniBatchKMeans(n_clusters = len(self.__tubes))
-        clt.fit(game_img)   
-        
-        hist = self.__centroid_histogram(clt)
-        # TODO: Find better algorithm to find colors
-        values = [val/min(hist) for val in hist]; percentage = []; colors = []
-
-        for val in range(len(values)):
-            if values[val] < 2:
-                percentage.append(hist[val])
-                colors.append(clt.cluster_centers_[val])
-
-        bar = self.__plot_colors(percentage, colors)
-        cv2.imshow('bar', bar)
-        cv2.waitKey()
-
-        return colors
-
-    def __plot_colors(self, hist, centroids):
+    def plot_color(self, color):
         bar = np.zeros((50, 300, 3), dtype = "uint8")
         startX = 0
-        for (percent, color) in zip(hist, centroids):
-            endX = startX + (percent * 300)
-            cv2.rectangle(bar, (int(startX), 0), (int(endX), 50),
-                color.astype("uint8").tolist(), -1)
-            startX = endX
+        endX = startX + (300)
+        cv2.rectangle(bar, (int(startX), 0), (int(endX), 50),
+            color.astype("uint8").tolist(), -1)
+        startX = endX
         
         return bar
-
-    def __centroid_histogram(self, clt):
-        numLabels = np.arange(0, len(np.unique(clt.labels_)) + 1)
-        (hist, _) = np.histogram(clt.labels_, bins = numLabels)
-        hist = hist.astype("float")
-        hist /= hist.sum()
-        return hist
 
     def __findTubeColors(self, padding = 20):
         colors = []
@@ -291,8 +252,6 @@ class Tubes:
             colors.append(color)
         return colors, gamecolors  
                                  
-
-
     def __rgb_euclid(self, color1, color2):
        diff = np.array(color2) - np.array(color1)
        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
