@@ -226,30 +226,39 @@ class Tubes:
             while y_top > 0:
                 color_img = tubes[y_top + padding: y_bot - 2 * padding,  padding: tubes.shape[1] - padding]
                 y_top -= height; y_bot -= height
-                color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
-                clt = MiniBatchKMeans(n_clusters = 1)
-                clt.fit(color_img)
 
-                boxcolor = clt.cluster_centers_[0]
+                # TODO: fix this
 
-                if len(gamecolors) == 0:
-                    gamecolors.append(boxcolor)
-                    color.append(1)
-                elif all(boxcolor < 50):
-                    continue
+                text = pytesseract.image_to_string(color_img)
+
+                print(text)
+                if '?' in text:
+                    color.append(-1)
                 else:
-                    found = False
-                    min = []
-                    for index, c in enumerate(gamecolors):
-                        if (self.__rgb_euclid(boxcolor, c) < 50):
-                            min.append([self.__rgb_euclid(boxcolor, c), index])
-                            found = True
- 
-                    if not found:
+                    color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
+                    clt = MiniBatchKMeans(n_clusters = 1)
+                    clt.fit(color_img)
+
+                    boxcolor = clt.cluster_centers_[0]
+
+                    if len(gamecolors) == 0:
                         gamecolors.append(boxcolor)
-                        color.append(len(gamecolors))
+                        color.append(1)
+                    elif all(boxcolor < 50):
+                        continue
                     else:
-                        color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
+                        found = False
+                        min = []
+                        for index, c in enumerate(gamecolors):
+                            if (self.__rgb_euclid(boxcolor, c) < 50):
+                                min.append([self.__rgb_euclid(boxcolor, c), index])
+                                found = True
+    
+                        if not found:
+                            gamecolors.append(boxcolor)
+                            color.append(len(gamecolors))
+                        else:
+                            color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
 
 
             colors.append(color)
@@ -272,13 +281,13 @@ class Tubes:
        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
 
     
-    def plot_tubes(self, tubes):
-        tubes_img = np.zeros((300, len(self.__tubes) * 65, 3), dtype = "uint8")
+    def plot_tubes(self, tubes, step = []):
+        tubes_img = np.zeros((350, len(self.__tubes) * 65, 3), dtype = "uint8")
         startX = 20
         startY = 240
         percents = [0.25 for i in range(4)]
 
-        for tube in tubes:
+        for index, tube in enumerate(tubes):
             colors = []
             for j in range(4 - len(tube)):
                 tube = np.append(tube, 0)
@@ -294,6 +303,14 @@ class Tubes:
                     color.astype("uint8").tolist(), -1)
                 cv2.rectangle(tubes_img, (int(startX), int(startY)), (int(endX), int(endY)),
                     [255, 255, 255], 3)
+                if len(step) != 0:
+                    if index == step[0]:
+                        cv2.rectangle(tubes_img, (int(startX) + 10, 280), (int(endX) - 10, 320),
+                        [52, 64, 235], -1)
+                    elif index == step[1]:
+                        cv2.rectangle(tubes_img, (int(startX) + 10, 280), (int(endX) - 10, 320),
+                        [52, 235, 58], -1)
+
                 startY = endY
             startX = endX + 20
             startY = 240

@@ -11,6 +11,7 @@ class Game(Tubes):
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
         self.displayPhone()
+        print(self.tubes)
         self.plot_tubes(self.tubes)
 
     def convertToString(self, tubes):
@@ -42,7 +43,7 @@ class Game(Tubes):
                     for a in answer:
                         print(a)
                         self.step2Tube(a)
-                        self.plot_tubes(self.convertToInt(self.tubes))
+                        self.plot_tubes(self.convertToInt(self.tubes), a)
 
                     break
                 else:
