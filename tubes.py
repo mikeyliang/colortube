@@ -236,7 +236,7 @@ class Tubes:
                     gamecolors.append(boxcolor)
                     color.append(1)
                 elif all(boxcolor < 50):
-                    color.append(0)
+                    continue
                 else:
                     found = False
                     min = []
@@ -272,28 +272,30 @@ class Tubes:
        return math.sqrt(diff[0]**2 + diff[1]**2 + diff[2]**2)
 
     
-    def plot_tubes(self):
-        tubes = np.zeros((300, len(self.__tubes) * 65, 3), dtype = "uint8")
+    def plot_tubes(self, tubes):
+        tubes_img = np.zeros((300, len(self.__tubes) * 65, 3), dtype = "uint8")
         startX = 20
-        startY = 40
+        startY = 240
         percents = [0.25 for i in range(4)]
 
-        for tube in self.__tube_colors:
+        for tube in tubes:
             colors = []
-            for i in np.flip(tube):
+            for j in range(4 - len(tube)):
+                tube = np.append(tube, 0)
+            for i in tube:
                 if i == 0:
                     colors.append(np.array([255, 255, 255]))
                 else:
                     colors.append(self.__colors[i-1])
             endX = startX + 40
             for (percent, color) in zip(percents, colors):
-                endY = startY + (percent * 200)
-                cv2.rectangle(tubes, (int(startX), int(startY)), (int(endX), int(endY)),
+                endY = startY - (percent * 200)
+                cv2.rectangle(tubes_img, (int(startX), int(startY)), (int(endX), int(endY)),
                     color.astype("uint8").tolist(), -1)
-                cv2.rectangle(tubes, (int(startX), int(startY)), (int(endX), int(endY)),
+                cv2.rectangle(tubes_img, (int(startX), int(startY)), (int(endX), int(endY)),
                     [255, 255, 255], 3)
                 startY = endY
             startX = endX + 20
-            startY = 40
-        cv2.imshow('Detected Tubes', tubes)
+            startY = 240
+        cv2.imshow('Detected Tubes', tubes_img)
         cv2.waitKey()

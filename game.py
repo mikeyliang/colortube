@@ -1,6 +1,6 @@
 import copy
 from tubes import Tubes
-import cv2
+import numpy as np
 
 MAX_HEIGHT = 4
 class Game(Tubes):
@@ -11,16 +11,19 @@ class Game(Tubes):
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
         self.displayPhone()
-        self.plot_tubes()
+        self.plot_tubes(self.tubes)
 
     def convertToString(self, tubes):
         result = []
-        for t in self.tubes:
+        for t in tubes:
             new_tube = []
             for c in t:
                 new_tube.append(str(c))
             result.append(new_tube)
         self.tubes = result
+
+    def convertToInt(self, tubes):
+        return [[int(c) for c in t] for t in tubes]
 
     def solve(self):
         self.convertToString(self.tubes)
@@ -38,6 +41,8 @@ class Game(Tubes):
                 if len(answer) > 0:
                     for a in answer:
                         print(a)
+                        self.step2Tube(a)
+                        self.plot_tubes(self.convertToInt(self.tubes))
 
                     break
                 else:
@@ -56,7 +61,7 @@ class Game(Tubes):
                     return False
         return True
                 
-    def count_color_in_tube(tube, color):
+    def count_color_in_tube(self, tube, color):
         max = 0
         for c in tube:
             if (c == color):
@@ -90,7 +95,7 @@ class Game(Tubes):
         while len(source) > 0:
             # look at next and compare
             next = source[len(source) - 1]
-            if (next == top and self.can_move(self, source, destination)):
+            if (next == top and self.can_move(source, destination)):
                 destination.append(source.pop())
             else:
                 break
@@ -102,7 +107,7 @@ class Game(Tubes):
                 result += c
         return result
 
-    def get_tube_as_string(tube):
+    def get_tube_as_string(self, tube):
         result = ''
         for c in tube:
             result += c
@@ -118,7 +123,7 @@ class Game(Tubes):
                     new_game = copy.deepcopy(current_game)
 
                     # new_game[j].append(new_game[i].pop())
-                    self.pour(self, new_game[i], new_game[j])
+                    self.pour(new_game[i], new_game[j])
 
                     if (self.is_solved(new_game)):
                         answer.append([i, j])
@@ -127,9 +132,14 @@ class Game(Tubes):
                         return True
                     # recursively try to solve next iteration
                     if (self.get_game_as_string(new_game) not in visited_tubes):
-                        solve_next = self.solve_game(self, new_game, visited_tubes, answer)
+                        solve_next = self.solve_game(new_game, visited_tubes, answer)
                         if (solve_next):
+
                             answer.append([i, j])
                             return True
         return answer
+
+    def step2Tube(self, step):
+        self.pour(self.tubes[step[0]], self.tubes[step[1]])
+
             
