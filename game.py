@@ -10,8 +10,6 @@ class Game(Tubes):
         self.colors = self.getGameColors() # List of colors in the current game level
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
-        self.displayPhone()
-        print(self.tubes)
         self.plot_tubes(self.tubes)
 
     def convertToString(self, tubes):

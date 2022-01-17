@@ -155,7 +155,7 @@ class Tubes:
         return None, []
 
     # Tubes are from Top to Bottom, Left to Right
-    def __findTube(self, area_threshold = 0.8, padding = 10):
+    def __findTube(self, area_threshold = 0.8):
         thresh = self.__findThreshold(self.__phone, thresh_params = [5, 5])
         contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -172,12 +172,15 @@ class Tubes:
 
         rects = np.array(sorted(rects, key = lambda x: (x[0], x[1])))
         MAX_AREA = max(rects[:, 2]) * max(rects[:, 3])
+
+        h_pad = np.mean(rects[:, 2]) / 10
+        v_pad = np.mean(rects[:, 3])/ 6
         
         for rect in rects:
             if rect[2] * rect[3] > area_threshold * MAX_AREA:
 
-                rect[0] += 2 * padding; rect[2] -= 4 * padding
-                rect[1] += 10 * padding; rect[3] -= 12 * padding
+                rect[0] += h_pad; rect[2] -= 2 * h_pad
+                rect[1] += 2 * v_pad; rect[3] -= 2 * v_pad
 
                 rect = [[rect[0], rect[1]], [rect[0] + rect[2], rect[1]], 
                         [rect[0] + rect[2], rect[1] + rect[3]], [rect[0], rect[1] + rect[3]]]
@@ -214,24 +217,25 @@ class Tubes:
         
         return bar
 
-    def __findTubeColors(self, padding = 20):
+    def __findTubeColors(self):
         colors = []
         gamecolors = []
         for index, tubes in enumerate(self.__tubes_img):
             color = []
             height = math.floor(tubes.shape[0]/4 - 1)
+            width = math.floor(tubes.shape[1]/4 - 1)
             y_top = tubes.shape[0] - height
             y_bot = tubes.shape[0]
+            h_pad = math.floor(width / 3)
+            v_pad = math.floor(height / 3)
             
             while y_top > 0:
-                color_img = tubes[y_top + padding: y_bot - 2 * padding,  padding: tubes.shape[1] - padding]
+                color_img = tubes[y_top + v_pad: y_bot - v_pad,  h_pad: tubes.shape[1] - h_pad]
                 y_top -= height; y_bot -= height
 
                 # TODO: fix this
+                text = []
 
-                text = pytesseract.image_to_string(color_img)
-
-                print(text)
                 if '?' in text:
                     color.append(-1)
                 else:
