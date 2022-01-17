@@ -34,6 +34,7 @@ class Tubes:
             print(f"FOUND {self.__level[0]}: {self.__level[1]}")
             self.__phone = self.__phone[self.__level_bbox[3][1]: self.__phone.shape[0], 0: self.__phone.shape[1]]
             self.__tubes, self.__tubes_img = self.__findTube()
+            self.__gameType = self.__detectGameType()
             print(f"FOUND TUBES: {len(self.__tubes)}")
             self.__tube_colors, self.__colors = self.__findTubeColors()
             if len(self.__colors) == len(self.__tubes) - 2:
@@ -217,33 +218,54 @@ class Tubes:
         
         return bar
 
-    def __findTubeColors(self):
-        colors = []
-        gamecolors = []
-        for index, tubes in enumerate(self.__tubes_img):
-            color = []
+    def __detectGameType(self):
+        for tubes in self.__tubes_img:
             height = math.floor(tubes.shape[0]/4 - 1)
             width = math.floor(tubes.shape[1]/4 - 1)
             y_top = tubes.shape[0] - height
             y_bot = tubes.shape[0]
             h_pad = math.floor(width / 3)
             v_pad = math.floor(height / 3)
-            
             while y_top > 0:
-                color_img = tubes[y_top + v_pad: y_bot - v_pad,  h_pad: tubes.shape[1] - h_pad]
+                question = tubes[y_top: y_bot, h_pad: tubes.shape[1] - h_pad]
+                grey = cv2.cvtColor(question, cv2.COLOR_BGR2GRAY)
+                thresh = cv2.threshold(grey, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+                resize = cv2.resize(thresh, (question.shape[1] * 2, question.shape[0]))
+                text = pytesseract.image_to_string(resize, lang='eng', config='--psm 7')
+                y_top -= height; y_bot -= height 
+                if '?' in text or '2' in text:
+                    return 'mystery'
+        return 'color'
+
+    def __findTubeColors(self):
+        colors = []
+        gamecolors = []
+        for tubes in self.__tubes_img:
+            color = []
+            height = math.floor(tubes.shape[0]/4 - 1)
+            width = math.floor(tubes.shape[1]/4 - 1)
+            y_top = tubes.shape[0] - height
+            y_bot = tubes.shape[0]
+            h_pad = math.floor(width / 3)
+            v_pad = math.floor(height / 4)
+            box_index = 0
+            while y_top > 0:
+                color_img = tubes[y_top + 2 * v_pad: y_bot - v_pad,  2 * h_pad: tubes.shape[1] - 2 * h_pad]
+
                 y_top -= height; y_bot -= height
 
                 # TODO: fix this
-                text = []
-
-                if '?' in text:
+                
+                if self.__gameType == 'mystery' and box_index in range(3):
                     color.append(-1)
+                    box_index += 1
                 else:
                     color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
                     clt = MiniBatchKMeans(n_clusters = 1)
                     clt.fit(color_img)
 
                     boxcolor = clt.cluster_centers_[0]
+                    box_index = 0
 
                     if len(gamecolors) == 0:
                         gamecolors.append(boxcolor)
@@ -298,6 +320,8 @@ class Tubes:
             for i in tube:
                 if i == 0:
                     colors.append(np.array([255, 255, 255]))
+                elif i == -1:
+                    colors.append(np.array([204, 153, 255]))
                 else:
                     colors.append(self.__colors[i-1])
             endX = startX + 40
