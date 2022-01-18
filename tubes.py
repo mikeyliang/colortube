@@ -174,14 +174,13 @@ class Tubes:
         rects = np.array(sorted(rects, key = lambda x: (x[0], x[1])))
         MAX_AREA = max(rects[:, 2]) * max(rects[:, 3])
 
-        h_pad = np.mean(rects[:, 2]) / 10
-        v_pad = np.mean(rects[:, 3])/ 6
+
         
         for rect in rects:
             if rect[2] * rect[3] > area_threshold * MAX_AREA:
 
-                rect[0] += h_pad; rect[2] -= 2 * h_pad
-                rect[1] += 2 * v_pad; rect[3] -= 2 * v_pad
+                rect[0] += rect[2]/8; rect[2] -= 2 * rect[2]/8
+                rect[1] += rect[3]/6; rect[3] -= rect[3]/6
 
                 rect = [[rect[0], rect[1]], [rect[0] + rect[2], rect[1]], 
                         [rect[0] + rect[2], rect[1] + rect[3]], [rect[0], rect[1] + rect[3]]]
@@ -247,16 +246,16 @@ class Tubes:
             y_top = tubes.shape[0] - height
             y_bot = tubes.shape[0]
             h_pad = math.floor(width / 3)
-            v_pad = math.floor(height / 4)
+            v_pad = math.floor(height / 5)
             box_index = 0
             while y_top > 0:
-                color_img = tubes[y_top + 2 * v_pad: y_bot - v_pad,  2 * h_pad: tubes.shape[1] - 2 * h_pad]
+                color_img = tubes[y_top + v_pad: y_bot - 3 * v_pad,  2 * h_pad: tubes.shape[1] - 2 * h_pad]
 
                 y_top -= height; y_bot -= height
 
-                # TODO: fix this
-                
-                if self.__gameType == 'mystery' and box_index in range(3):
+                # TODO: fix detect question mark
+                # if self.__gameType == 'mystery' and box_index in range(3):
+                if False:
                     color.append(-1)
                     box_index += 1
                 else:
