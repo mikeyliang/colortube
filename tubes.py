@@ -174,7 +174,6 @@ class Tubes:
         rects = np.array(sorted(rects, key = lambda x: (x[0], x[1])))
         MAX_AREA = max(rects[:, 2]) * max(rects[:, 3])
 
-
         
         for rect in rects:
             if rect[2] * rect[3] > area_threshold * MAX_AREA:
@@ -218,23 +217,8 @@ class Tubes:
         return bar
 
     def __detectGameType(self):
-        for tubes in self.__tubes_img:
-            height = math.floor(tubes.shape[0]/4 - 1)
-            width = math.floor(tubes.shape[1]/4 - 1)
-            y_top = tubes.shape[0] - height
-            y_bot = tubes.shape[0]
-            h_pad = math.floor(width / 3)
-            v_pad = math.floor(height / 3)
-            while y_top > 0:
-                question = tubes[y_top: y_bot, h_pad: tubes.shape[1] - h_pad]
-                grey = cv2.cvtColor(question, cv2.COLOR_BGR2GRAY)
-                thresh = cv2.threshold(grey, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-                resize = cv2.resize(thresh, (question.shape[1] * 2, question.shape[0]))
-                text = pytesseract.image_to_string(resize, lang='eng', config='--psm 7')
-                y_top -= height; y_bot -= height 
-                if '?' in text or '2' in text:
-                    return 'mystery'
-        return 'color'
+        level = int(self.__level[1])
+        return 'mystery' if level % 5 == 0 else 'color'
 
     def __findTubeColors(self):
         colors = []
@@ -252,40 +236,37 @@ class Tubes:
                 color_img = tubes[y_top + v_pad: y_bot - 3 * v_pad,  2 * h_pad: tubes.shape[1] - 2 * h_pad]
 
                 y_top -= height; y_bot -= height
+                
+                color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
+                clt = MiniBatchKMeans(n_clusters = 1)
+                clt.fit(color_img)
 
-                # TODO: fix detect question mark
-                # if self.__gameType == 'mystery' and box_index in range(3):
-                if False:
-                    color.append(-1)
-                    box_index += 1
+                boxcolor = clt.cluster_centers_[0]
+                
+
+                if self.__gameType == 'mystery' and box_index in range(3):
+                    if not all(boxcolor < 50):
+                        color.append(-1)
+                        box_index += 1
+                elif len(gamecolors) == 0:
+                    gamecolors.append(boxcolor)
+                    color.append(1)
+                elif all(boxcolor < 50):
+                    continue
                 else:
-                    color_img = color_img.reshape((color_img.shape[0] * color_img.shape[1], 3))
-                    clt = MiniBatchKMeans(n_clusters = 1)
-                    clt.fit(color_img)
+                    found = False
+                    min = []
+                    for index, c in enumerate(gamecolors):
+                        if (self.__rgb_euclid(boxcolor, c) < 50):
+                            min.append([self.__rgb_euclid(boxcolor, c), index])
+                            found = True
 
-                    boxcolor = clt.cluster_centers_[0]
-                    box_index = 0
-
-                    if len(gamecolors) == 0:
+                    if not found:
                         gamecolors.append(boxcolor)
-                        color.append(1)
-                    elif all(boxcolor < 50):
-                        continue
+                        color.append(len(gamecolors))
                     else:
-                        found = False
-                        min = []
-                        for index, c in enumerate(gamecolors):
-                            if (self.__rgb_euclid(boxcolor, c) < 50):
-                                min.append([self.__rgb_euclid(boxcolor, c), index])
-                                found = True
-    
-                        if not found:
-                            gamecolors.append(boxcolor)
-                            color.append(len(gamecolors))
-                        else:
-                            color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
-
-
+                        color.append(min[np.argmin(min, axis = 0)[0]][1] + 1)
+            box_index = 0
             colors.append(color)
             
         # ----------- Swap even and odd tubes ----------- #

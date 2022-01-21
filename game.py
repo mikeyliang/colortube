@@ -11,6 +11,7 @@ class Game(Tubes):
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
         print(self.tubes)
+        self.displayTube()
         self.plot_tubes(self.tubes)
 
     def convertToString(self, tubes):
