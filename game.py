@@ -1,6 +1,7 @@
 import copy
 from tubes import Tubes
 import numpy as np
+import json
 
 MAX_HEIGHT = 4
 class Game(Tubes):
@@ -11,8 +12,13 @@ class Game(Tubes):
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
         print(self.tubes)
-        self.displayTube()
         self.plot_tubes(self.tubes)
+        self.pos = self.getPos()
+        self.level = self.getLevel()
+
+    def getJSON(self):
+        with open(f'{self.level}.json', 'w') as f:
+            json.dump(self.pos, f, indent=2, cls=NpEncoder)
 
     def convertToString(self, tubes):
         result = []
@@ -44,13 +50,15 @@ class Game(Tubes):
                         print(a)
                         self.step2Tube(a)
                         self.plot_tubes(self.convertToInt(self.tubes), a)
+                        for step in a:
+                            self.pos['steps'].append(step)
 
                     break
                 else:
                     first_tube = self.tubes.pop()
                     self.tubes.insert(0, first_tube)
                     # print(self.tubes)
-        
+        self.getJSON()
         
 
     def is_solved(self, tubes):
@@ -143,4 +151,12 @@ class Game(Tubes):
     def step2Tube(self, step):
         self.pour(self.tubes[step[0]], self.tubes[step[1]])
 
-            
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)

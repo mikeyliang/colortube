@@ -60,6 +60,9 @@ class Tubes:
     def getGameColors(self):
         return self.__colors
 
+    def getLevel(self):
+        return self.__level[1]
+
     def displayImg(self):
         cv2.imshow('Tube', self.__img.copy())
         cv2.waitKey()
@@ -324,3 +327,17 @@ class Tubes:
             startY = 240
         cv2.imshow('Detected Tubes', tubes_img)
         cv2.waitKey()
+
+    def getPos(self):
+        keys = ['tubes', 'steps']
+        values = [dict({}), list()]
+        xy = dict(zip(keys, values))
+        for ind, bbox in enumerate(self.__tubes):
+            xpos = (bbox[1][0] + bbox[0][0])/2
+            ypos = (bbox[2][1] + bbox[1][1])/2
+            xy['tubes'][ind] = dict({'x':round(xpos), 'y':round(ypos)})
+        return xy
+            
+        
+
+        
