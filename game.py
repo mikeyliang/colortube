@@ -46,12 +46,12 @@ class Game(Tubes):
                 answer.reverse()
 
                 if len(answer) > 0:
-                    for a in answer:
+                    for ind, a in enumerate(answer):
                         print(a)
+                        self.pos['steps'][ind] = a
                         self.step2Tube(a)
                         self.plot_tubes(self.convertToInt(self.tubes), a)
-                        for step in a:
-                            self.pos['steps'].append(step)
+                        
 
                     break
                 else:

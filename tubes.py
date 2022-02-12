@@ -330,7 +330,7 @@ class Tubes:
 
     def getPos(self):
         keys = ['tubes', 'steps']
-        values = [dict({}), list()]
+        values = [dict({}), dict({})]
         xy = dict(zip(keys, values))
         for ind, bbox in enumerate(self.__tubes):
             xpos = (bbox[1][0] + bbox[0][0])/2
