@@ -329,8 +329,8 @@ class Tubes:
         cv2.waitKey()
 
     def getPos(self):
-        keys = ['tubes', 'steps']
-        values = [dict({}), dict({})]
+        keys = ['level', 'tubes', 'steps']
+        values = [self.__level[1], dict({}), dict({})]
         xy = dict(zip(keys, values))
         for ind, bbox in enumerate(self.__tubes):
             xpos = (bbox[1][0] + bbox[0][0])/2
