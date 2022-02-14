@@ -6,15 +6,18 @@ import json
 MAX_HEIGHT = 4
 class Game(Tubes):
     
-    def __init__(self, img, type):
+    def __init__(self, img, type, display = True):
         super().__init__(img, type)
+        self.display = display
         self.colors = self.getGameColors() # List of colors in the current game level
         self.tubes = self.getTubeColors() # Left -> Tube Bottom, Right -> Tube Top
         print("\nGAME LOADED!")
         print(self.tubes)
-        self.plot_tubes(self.tubes)
+        if self.display == True:
+            self.plot_tubes(self.tubes)
         self.pos = self.getPos()
         self.level = self.getLevel()
+        
 
     def getJSON(self):
         with open(f'{self.level}.json', 'w') as f:
@@ -50,9 +53,8 @@ class Game(Tubes):
                         print(a)
                         self.pos['steps'][ind] = a
                         self.step2Tube(a)
-                        self.plot_tubes(self.convertToInt(self.tubes), a)
-                        
-
+                        if self.display == True:
+                            self.plot_tubes(self.convertToInt(self.tubes), a)
                     break
                 else:
                     first_tube = self.tubes.pop()
